@@ -16,11 +16,13 @@
 
 package ua_parser;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import dk.brics.automaton.RunAutomaton;
 
 /**
  * Operating System parser using ua-parser. Extracts OS information from user agent strings.
@@ -63,7 +65,7 @@ public class OSParser {
       throw new IllegalArgumentException("OS is missing regex");
     }
 
-    return(new OSPattern(Pattern.compile(regex),
+    return(new OSPattern(regex,
                          configMap.get("os_replacement"),
                          configMap.get("os_v1_replacement"),
                          configMap.get("os_v2_replacement"),
@@ -72,10 +74,12 @@ public class OSParser {
 
   protected static class OSPattern {
     private final Pattern pattern;
+    private RunAutomaton runAutomaton;
     private final String osReplacement, v1Replacement, v2Replacement, v3Replacement;
 
-    public OSPattern(Pattern pattern, String osReplacement, String v1Replacement, String v2Replacement, String v3Replacement) {
-      this.pattern = pattern;
+    public OSPattern(String regex, String osReplacement, String v1Replacement, String v2Replacement, String v3Replacement) {
+      this.pattern = Pattern.compile(regex);
+      this.runAutomaton = dk.brics.automaton.Pattern.compile(regex);
       this.osReplacement = osReplacement;
       this.v1Replacement = v1Replacement;
       this.v2Replacement = v2Replacement;
@@ -83,6 +87,12 @@ public class OSParser {
     }
 
     public OS match(String agentString) {
+      if (runAutomaton != null) {
+        if (!runAutomaton.run(agentString)) {
+          return null;
+        }
+      }
+
       String family = null, v1 = null, v2 = null, v3 = null, v4 = null;
       Matcher matcher = pattern.matcher(agentString);
 

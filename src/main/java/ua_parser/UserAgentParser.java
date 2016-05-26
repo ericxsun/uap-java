@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import dk.brics.automaton.RunAutomaton;
+
 /**
  * User Agent parser using ua-parser regexes
  *
@@ -63,7 +65,7 @@ public class UserAgentParser {
       throw new IllegalArgumentException("User agent is missing regex");
     }
 
-    return(new UAPattern(Pattern.compile(regex),
+    return(new UAPattern(regex,
                          configMap.get("family_replacement"),
                          configMap.get("v1_replacement"),
                          configMap.get("v2_replacement")));
@@ -71,16 +73,24 @@ public class UserAgentParser {
 
   protected static class UAPattern {
     private final Pattern pattern;
+    private final RunAutomaton runAutomaton;
     private final String familyReplacement, v1Replacement, v2Replacement;
 
-    public UAPattern(Pattern pattern, String familyReplacement, String v1Replacement, String v2Replacement) {
-      this.pattern = pattern;
+    public UAPattern(String regex, String familyReplacement, String v1Replacement, String v2Replacement) {
+      this.pattern = Pattern.compile(regex);
+      this.runAutomaton = dk.brics.automaton.Pattern.compile(regex);
       this.familyReplacement = familyReplacement;
       this.v1Replacement = v1Replacement;
       this.v2Replacement = v2Replacement;
     }
 
     public UserAgent match(String agentString) {
+      if (runAutomaton != null) {
+        if (!runAutomaton.run(agentString)) {
+          return null;
+        }
+      }
+
       String family = null, v1 = null, v2 = null, v3 = null;
       Matcher matcher = pattern.matcher(agentString);
 
